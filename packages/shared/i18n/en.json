@@ -236,20 +236,52 @@
         "tickets": "Feedback follow-up tickets"
       },
       "plans": {
-        "free": { "name": "Free", "description": "For individuals or small teams getting started with feedback collection.", "action": "Start for free" },
-        "pro": { "name": "Pro", "description": "For teams that need more surveys, members, and analysis tools.", "action": "Sign in to view plan" },
-        "business": { "name": "Business", "description": "For organizations with multiple teams and high response volumes.", "action": "Sign in to view plan" }
+        "free": {
+          "name": "Free",
+          "description": "For individuals or small teams getting started with feedback collection.",
+          "action": "Start for free"
+        },
+        "pro": {
+          "name": "Pro",
+          "description": "For teams that need more surveys, members, and analysis tools.",
+          "action": "Sign in to view plan"
+        },
+        "business": {
+          "name": "Business",
+          "description": "For organizations with multiple teams and high response volumes.",
+          "action": "Sign in to view plan"
+        }
       }
     },
     "resourcesPage": {
       "eyebrow": "Guides and resources",
       "title": "Resources to help you get started",
       "description": "Find guidance for the survey, data, and API workflows available in the platform.",
-      "gettingStarted": { "title": "Get started in 3 steps", "description": "Create a survey, share it by link or QR code, then follow results in reports.", "action": "View the workflow" },
-      "surveys": { "title": "Design a survey", "description": "Explore question types, survey customization, and feedback collection features.", "action": "Explore features" },
-      "data": { "title": "Import and export data", "description": "Sign in to import responses from CSV/XLSX or see available report export options.", "action": "Sign in" },
-      "api": { "title": "API documentation", "description": "Browse interactive API documentation for endpoints and request and response formats.", "action": "Open API docs" },
-      "help": { "title": "Frequently asked questions", "description": "Read answers about survey responses, feedback analysis, and report exports.", "action": "View questions" },
+      "gettingStarted": {
+        "title": "Get started in 3 steps",
+        "description": "Create a survey, share it by link or QR code, then follow results in reports.",
+        "action": "View the workflow"
+      },
+      "surveys": {
+        "title": "Design a survey",
+        "description": "Explore question types, survey customization, and feedback collection features.",
+        "action": "Explore features"
+      },
+      "data": {
+        "title": "Import and export data",
+        "description": "Sign in to import responses from CSV/XLSX or see available report export options.",
+        "action": "Sign in"
+      },
+      "api": {
+        "title": "API documentation",
+        "description": "Browse interactive API documentation for endpoints and request and response formats.",
+        "action": "Open API docs"
+      },
+      "help": {
+        "title": "Frequently asked questions",
+        "description": "Read answers about survey responses, feedback analysis, and report exports.",
+        "action": "View questions"
+      },
       "ctaTitle": "Ready to create your first survey?",
       "ctaDescription": "Create an account to start designing surveys and managing your responses.",
       "ctaAction": "Create an account"
@@ -1068,7 +1100,7 @@
     "overallAssessment": "Overall assessment",
     "qualityImproved": "CSAT increased by {delta} points from the first period to the last; satisfaction is improving.",
     "qualityDeclined": "CSAT decreased by {delta} points from the first period to the last; recent periods may need review.",
-    "qualityStable": "CSAT is stable, with no meaningful change between the first and last periods.",
+    "qualityStable": "Operating steadily",
     "qualityAssessmentUnavailable": "At least two periods with CSAT data are needed to assess the trend.",
     "empty": "No data yet.",
     "topics": "Topic trends",
@@ -1090,7 +1122,6 @@
     "overallRating": "Overall assessment",
     "qualityWarning": "Warning: prioritize",
     "qualityWatch": "Needs monitoring",
-    "qualityStable": "Operating steadily",
     "topicQualityEmpty": "No topic analysis is available for this period.",
     "recurringIssues": "Recurring issues to address",
     "recurringIssuesDescription": "Topics with at least two negative responses. Select a topic to review related feedback.",
@@ -1122,7 +1153,43 @@
       "negative": "Negative",
       "neutral": "Neutral"
     },
-    "exportResponses": "Export responses XLSX"
+    "exportResponses": "Export responses XLSX",
+    "recommendationEvidenceNote": "Suggestions are selected from the topic label and sample quote; verify the cause before acting.",
+    "recommendationsEmpty": "There are not enough repeated negative responses to make issue specific recommendations.",
+    "recommendationAdvice": {
+      "payment": {
+        "short": "Check ordering, voucher application, and the final amount; reconcile failed orders with payment transactions.",
+        "long": "Standardize discounts and payment handling; track payment failures, invoice mismatches, and complaints by channel."
+      },
+      "technical": {
+        "short": "Reproduce the issue on the customer’s device and app version; record the time, error message, and workaround.",
+        "long": "Track errors by release and device, set an incident response target, and run regression checks before releases."
+      },
+      "wait": {
+        "short": "Measure waits by time and shift; find bottlenecks, add peak time coverage, and tell customers the expected wait.",
+        "long": "Plan staffing around peaks; track median waits, long waits, and negative feedback by shift and branch."
+      },
+      "staff": {
+        "short": "Have the shift lead review the reported interaction, speak with the staff involved, and agree on the response for next time.",
+        "long": "Standardize communication and handoffs; coach with real scenarios and track repeat complaints by shift."
+      },
+      "price": {
+        "short": "Compare the displayed price with the receipt; check how fees, discounts, and return terms appear before checkout.",
+        "long": "Display prices, fees, and discount/refund terms consistently; track price complaints and abandoned checkouts."
+      },
+      "product": {
+        "short": "Inspect the reported batch/order, photos, packaging, and storage; review other orders with the same product code.",
+        "long": "Strengthen quality checks at the point of failure; track defects, returns, and repeat complaints by product/batch."
+      },
+      "facility": {
+        "short": "Inspect the reported area and time; log the repair needed, owner, and due date.",
+        "long": "Schedule preventive maintenance and cleaning checks; track repair time and recurring facility issues."
+      },
+      "other": {
+        "short": "Review sample comments and compare time, channel, and branch to find a common situation; assign someone to investigate.",
+        "long": "After confirming the cause, set an owner and due date for corrective action; track whether the issue recurs."
+      }
+    }
   },
   "engagement": {
     "tickets": "Complaint handling",

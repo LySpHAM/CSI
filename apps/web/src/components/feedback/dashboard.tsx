@@ -42,6 +42,7 @@ type TopicQuality = {
   urgent: number;
   csat: number | null;
   sample: string | null;
+  recommendation_key: "payment" | "technical" | "wait" | "staff" | "price" | "product" | "facility" | "other";
 };
 type Word = { word: string; sentiment: string; count: number };
 type Export = {
@@ -705,24 +706,17 @@ export function Dashboard() {
           </section>
           <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
             <h2 className="text-xl font-semibold">{t("recommendations")}</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <article className="rounded-xl border border-border/70 bg-background p-4">
-                <h3 className="font-semibold">{t("shortTerm")}</h3>
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                  <li>{t("shortTermFocus", { topics: recurringIssues.slice(0, 3).map((item) => item.topic_name).join(", ") || t("noPriorityTopics") })}</li>
-                  <li>{t("shortTermOwner")}</li>
-                  <li>{t("shortTermCompare")}</li>
-                </ul>
-              </article>
-              <article className="rounded-xl border border-border/70 bg-background p-4">
-                <h3 className="font-semibold">{t("longTerm")}</h3>
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                  <li>{t("longTermSop")}</li>
-                  <li>{t("longTermMonitor")}</li>
-                  <li>{t("longTermSurvey")}</li>
-                </ul>
-              </article>
-            </div>
+            {recurringIssues.length ? <div className="space-y-3">
+              {recurringIssues.slice(0, 3).map((topic) => <article key={topic.topic_id} className="rounded-xl border border-border/70 bg-background p-4">
+                <h3 className="font-semibold">{topic.topic_name} <span className="text-sm font-normal text-muted-foreground">({t("repeatCount", { count: topic.negative, share: Math.round(topic.negative / Math.max(1, negativeTopicTotal) * 100) })})</span></h3>
+                {topic.sample && <p className="mt-2 text-sm italic text-muted-foreground">{t("sampleQuote", { quote: topic.sample })}</p>}
+                <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                  <div><h4 className="font-medium">{t("shortTerm")}</h4><p className="mt-1 text-muted-foreground">{t(`recommendationAdvice.${topic.recommendation_key}.short` as Parameters<typeof t>[0])}</p></div>
+                  <div><h4 className="font-medium">{t("longTerm")}</h4><p className="mt-1 text-muted-foreground">{t(`recommendationAdvice.${topic.recommendation_key}.long` as Parameters<typeof t>[0])}</p></div>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">{t("recommendationEvidenceNote")}</p>
+              </article>)}
+            </div> : <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">{t("recommendationsEmpty")}</p>}
           </section>
           <div className="grid gap-4 md:grid-cols-2">
             {["positive", "negative"].map((sentiment) => (

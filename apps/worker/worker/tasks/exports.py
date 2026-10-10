@@ -34,6 +34,8 @@ async def _report_topic_data(service: AnalyticsService, filters: FeedbackFilter)
             "negative": row["negative"],
             "urgent": row["urgent"],
             "csat": row["csat"],
+            "recommendation_key": row["recommendation_key"],
+            "sample": row["sample"],
         }
         for row in quality
     }
@@ -329,34 +331,39 @@ async def render(
             content.append(Paragraph("Chưa ghi nhận chủ đề có từ hai phản hồi tiêu cực trở lên trong kỳ.", body))
 
         content.append(Paragraph("4. KHUYẾN NGHỊ CHIẾN LƯỢC CẢI THIỆN CHẤT LƯỢNG DỊCH VỤ", section))
-        priority_names = [names[topic_id] for topic_id, _ in topic_data["issues"][:3]]
-        focus = ", ".join(escape(name) for name in priority_names) or "các chủ đề có tỷ lệ tiêu cực cao"
-        short_term = [
-            f"Ưu tiên rà soát {focus}; kiểm tra phản hồi gốc và xác định nguyên nhân trong 7–14 ngày.",
-            "Giao người phụ trách, thời hạn khắc phục và phản hồi lại khách hàng bị ảnh hưởng.",
-            "Đối chiếu kết quả theo chi nhánh/kênh để tìm điểm phát sinh tập trung.",
-        ]
-        long_term = [
-            "Chuẩn hóa quy trình phục vụ (SOP) và đào tạo nhân viên theo nguyên nhân đã xác nhận.",
-            "Theo dõi CSAT và tỷ lệ phản hồi tiêu cực theo tuần; đặt ngưỡng cảnh báo cho chủ đề ưu tiên.",
-            "Lặp lại khảo sát sau cải thiện để đánh giá hiệu quả và cập nhật kế hoạch.",
-        ]
-        recommendations = Table([[
-            Paragraph("<b>Ngắn hạn (7–14 ngày)</b><br/><br/>• " + "<br/><br/>• ".join(short_term), body),
-            Paragraph("<b>Dài hạn (quý tiếp theo)</b><br/><br/>• " + "<br/><br/>• ".join(long_term), body),
-        ]], colWidths=[252, 253])
-        recommendations.setStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), pale),
-            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#d7e0e8")),
-            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d7e0e8")),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("TOPPADDING", (0, 0), (-1, -1), 10),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-        ])
+        advice = {
+            "payment": ("Kiểm tra luồng đặt hàng, voucher, số tiền cuối và đối chiếu giao dịch lỗi.", "Chuẩn hóa ưu đãi/thanh toán; theo dõi lỗi thanh toán, hóa đơn lệch và khiếu nại theo kênh."),
+            "technical": ("Tái hiện lỗi trên đúng thiết bị/phiên bản; ghi thời điểm, thông báo lỗi và cách xử lý tạm.", "Theo dõi lỗi theo phiên bản, đặt hạn phản hồi sự cố và kiểm tra hồi quy trước khi phát hành."),
+            "wait": ("Đo thời gian chờ theo giờ/ca, tìm điểm nghẽn và tăng hỗ trợ lúc cao điểm.", "Dự báo nhân sự; theo dõi thời gian chờ và phản hồi tiêu cực theo ca/chi nhánh."),
+            "staff": ("Quản lý ca rà soát tình huống, trao đổi với nhân viên liên quan và thống nhất cách xử lý.", "Chuẩn hóa giao tiếp/bàn giao, huấn luyện theo tình huống và theo dõi khiếu nại lặp lại theo ca."),
+            "price": ("Đối chiếu giá thấy được với hóa đơn; kiểm tra phụ phí, điều kiện giảm giá và đổi trả.", "Công khai thống nhất giá/phụ phí/điều kiện ưu đãi; theo dõi khiếu nại giá và giao dịch bỏ dở."),
+            "product": ("Kiểm tra lô hàng/đơn được phản ánh, đóng gói và bảo quản; rà soát cùng mã sản phẩm.", "Tăng kiểm tra chất lượng tại khâu phát sinh; theo dõi lỗi, đổi trả theo mã hàng/lô."),
+            "facility": ("Kiểm tra đúng khu vực/thời điểm; giao người phụ trách và hạn xử lý hạng mục.", "Lập lịch bảo trì/vệ sinh; theo dõi thời gian sửa và lỗi cơ sở vật chất tái diễn."),
+            "other": ("Đối chiếu phản hồi mẫu theo thời gian, kênh, chi nhánh để tìm tình huống chung.", "Sau khi xác minh nguyên nhân, đặt người phụ trách, hạn hoàn thành và đo mức tái diễn."),
+        }
+        recommendation_cards = []
+        for topic_id, data in topic_data["issues"][:3]:
+            short, long = advice.get(data["recommendation_key"], advice["other"])
+            title = escape(names[topic_id])
+            quote = f"<br/><i>Trích dẫn: “{escape(data['sample'])}”</i>" if data.get("sample") else ""
+            card = Table([
+                [Paragraph(f"<b>{title}</b> ({data['negative']} phản hồi tiêu cực){quote}", body), ""],
+                [Paragraph("<b>Ngắn hạn (7–14 ngày)</b><br/>" + escape(short), body), Paragraph("<b>Dài hạn</b><br/>" + escape(long), body)],
+            ], colWidths=[252.5, 252.5])
+            card.setStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), pale),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#d7e0e8")),
+                ("INNERGRID", (0, 1), (-1, 1), 0.5, colors.HexColor("#d7e0e8")),
+                ("SPAN", (0, 0), (1, 0)),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ])
+            recommendation_cards.extend([card, Spacer(1, 5)])
+        content.extend(recommendation_cards or [Paragraph("Chưa có đủ phản hồi tiêu cực lặp lại để đưa ra khuyến nghị theo từng vấn đề.", body)])
         content.extend([
-            recommendations,
             Spacer(1, 8),
             Paragraph(
                 "Tỷ lệ cảm xúc được tính trên nhận xét văn bản đã phân tích. Vấn đề lặp lại dựa trên chủ đề NLP và số phản hồi tiêu cực; cần đối chiếu trích dẫn với vận hành thực tế trước khi triển khai khuyến nghị. Báo cáo không đưa dữ liệu định danh khách hàng vào.",

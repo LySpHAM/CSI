@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any
 
 from sqlalchemy import Select, String, case, cast, func, select
@@ -14,6 +15,25 @@ from app.models import Answer, Question, Response, Survey, TextAnalysis, Topic, 
 from app.models.enums import ResponseStatus, Sentiment
 from app.schemas.feedback import FeedbackFilter
 from app.services.workspaces import WorkspaceService
+
+
+def _recommendation_key(topic_name: str, sample: str | None) -> str:
+    """Classify the issue area so recommendations can target its likely workflow."""
+    text = unicodedata.normalize("NFD", f"{topic_name} {sample or ''}".lower())
+    text = "".join(char for char in text if unicodedata.category(char) != "Mn").replace("đ", "d")
+    patterns = {
+        "payment": ("thanh toan", "voucher", "ma giam", "dat hang", "hoa don", "checkout", "payment"),
+        "technical": ("loi he thong", "ung dung", "website", "app", "ky thuat", "ket noi", "mang"),
+        "wait": ("cho doi", "cho lau", "xep hang", "toc do", "giao hang", "tre hen", "doi lau"),
+        "staff": ("nhan vien", "thai do", "tu van", "ky nang phuc vu", "giao tiep"),
+        "price": ("gia ca", "gia tien", "chi phi", "phi dich vu", "hoan tien", "doi tra", "chinh sach"),
+        "product": ("san pham", "chat luong", "mon an", "dong goi", "hu hong", "loi san pham"),
+        "facility": ("co so vat chat", "ve sinh", "khong gian", "thiet bi", "ban ghe", "bai xe"),
+    }
+    for key, terms in patterns.items():
+        if any(term in text for term in terms):
+            return key
+    return "other"
 
 
 class AnalyticsService:
@@ -195,6 +215,7 @@ class AnalyticsService:
                 "urgent": row.urgent,
                 "csat": float(row.csat) if row.csat is not None else None,
                 "sample": None,
+                "recommendation_key": "other",
             }
             if row.negative >= 2:
                 sample_query = (await self.analysis_scope(filters)).where(
@@ -212,6 +233,7 @@ class AnalyticsService:
                     sample = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[email]", sample)
                     sample = re.sub(r"(?<!\w)(?:\+?\d[\d .()-]{7,}\d)(?!\w)", "[số điện thoại]", sample)
                     item["sample"] = sample[:260].strip()
+            item["recommendation_key"] = _recommendation_key(row.topic_name, item["sample"])
             results.append(item)
         return results
 

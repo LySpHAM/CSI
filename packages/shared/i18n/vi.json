@@ -236,20 +236,52 @@
         "tickets": "Quản lý ticket xử lý phản hồi"
       },
       "plans": {
-        "free": { "name": "Miễn phí", "description": "Dành cho cá nhân hoặc nhóm nhỏ muốn bắt đầu thu thập phản hồi.", "action": "Bắt đầu miễn phí" },
-        "pro": { "name": "Pro", "description": "Dành cho đội ngũ cần nhiều khảo sát, thành viên và công cụ phân tích hơn.", "action": "Đăng nhập xem gói" },
-        "business": { "name": "Business", "description": "Dành cho tổ chức có nhiều nhóm làm việc và khối lượng phản hồi lớn.", "action": "Đăng nhập xem gói" }
+        "free": {
+          "name": "Miễn phí",
+          "description": "Dành cho cá nhân hoặc nhóm nhỏ muốn bắt đầu thu thập phản hồi.",
+          "action": "Bắt đầu miễn phí"
+        },
+        "pro": {
+          "name": "Pro",
+          "description": "Dành cho đội ngũ cần nhiều khảo sát, thành viên và công cụ phân tích hơn.",
+          "action": "Đăng nhập xem gói"
+        },
+        "business": {
+          "name": "Business",
+          "description": "Dành cho tổ chức có nhiều nhóm làm việc và khối lượng phản hồi lớn.",
+          "action": "Đăng nhập xem gói"
+        }
       }
     },
     "resourcesPage": {
       "eyebrow": "Trung tâm hướng dẫn",
       "title": "Tài nguyên để bạn bắt đầu nhanh",
       "description": "Tìm hướng dẫn sử dụng các luồng khảo sát, dữ liệu và API đang có trong nền tảng.",
-      "gettingStarted": { "title": "Bắt đầu trong 3 bước", "description": "Tạo khảo sát, chia sẻ bằng liên kết hoặc mã QR, rồi theo dõi kết quả trong báo cáo.", "action": "Xem quy trình" },
-      "surveys": { "title": "Thiết kế khảo sát", "description": "Tìm hiểu các loại câu hỏi, tùy chỉnh khảo sát và các tính năng thu thập phản hồi.", "action": "Khám phá tính năng" },
-      "data": { "title": "Import và xuất dữ liệu", "description": "Đăng nhập để import phản hồi bằng CSV/XLSX hoặc xem các tùy chọn xuất báo cáo khả dụng.", "action": "Đăng nhập" },
-      "api": { "title": "Tài liệu API", "description": "Tra cứu tài liệu API tương tác để xem các endpoint và cấu trúc yêu cầu, phản hồi.", "action": "Mở API docs" },
-      "help": { "title": "Câu hỏi thường gặp", "description": "Xem giải đáp về cách trả lời khảo sát, phân tích phản hồi và xuất báo cáo.", "action": "Xem câu hỏi" },
+      "gettingStarted": {
+        "title": "Bắt đầu trong 3 bước",
+        "description": "Tạo khảo sát, chia sẻ bằng liên kết hoặc mã QR, rồi theo dõi kết quả trong báo cáo.",
+        "action": "Xem quy trình"
+      },
+      "surveys": {
+        "title": "Thiết kế khảo sát",
+        "description": "Tìm hiểu các loại câu hỏi, tùy chỉnh khảo sát và các tính năng thu thập phản hồi.",
+        "action": "Khám phá tính năng"
+      },
+      "data": {
+        "title": "Import và xuất dữ liệu",
+        "description": "Đăng nhập để import phản hồi bằng CSV/XLSX hoặc xem các tùy chọn xuất báo cáo khả dụng.",
+        "action": "Đăng nhập"
+      },
+      "api": {
+        "title": "Tài liệu API",
+        "description": "Tra cứu tài liệu API tương tác để xem các endpoint và cấu trúc yêu cầu, phản hồi.",
+        "action": "Mở API docs"
+      },
+      "help": {
+        "title": "Câu hỏi thường gặp",
+        "description": "Xem giải đáp về cách trả lời khảo sát, phân tích phản hồi và xuất báo cáo.",
+        "action": "Xem câu hỏi"
+      },
       "ctaTitle": "Sẵn sàng tạo khảo sát đầu tiên?",
       "ctaDescription": "Tạo tài khoản để bắt đầu thiết kế khảo sát và quản lý phản hồi của bạn.",
       "ctaAction": "Tạo tài khoản"
@@ -1068,7 +1100,7 @@
     "overallAssessment": "Đánh giá chung",
     "qualityImproved": "CSAT tăng {delta} điểm từ kỳ đầu đến kỳ cuối; mức hài lòng đang cải thiện.",
     "qualityDeclined": "CSAT giảm {delta} điểm từ kỳ đầu đến kỳ cuối; nên xem lại các kỳ gần đây.",
-    "qualityStable": "CSAT ổn định, không thay đổi đáng kể giữa kỳ đầu và kỳ cuối.",
+    "qualityStable": "Hoạt động ổn định",
     "qualityAssessmentUnavailable": "Cần ít nhất hai kỳ có dữ liệu CSAT để đưa ra đánh giá xu hướng.",
     "empty": "Chưa có dữ liệu.",
     "topics": "Xu hướng chủ đề",
@@ -1090,7 +1122,6 @@
     "overallRating": "Đánh giá chung",
     "qualityWarning": "Cảnh báo: cần ưu tiên",
     "qualityWatch": "Cần theo dõi",
-    "qualityStable": "Hoạt động ổn định",
     "topicQualityEmpty": "Chưa có dữ liệu phân tích theo chủ đề trong kỳ này.",
     "recurringIssues": "Danh sách vấn đề lặp lại cần tập trung khắc phục",
     "recurringIssuesDescription": "Các chủ đề có ít nhất hai phản hồi tiêu cực; chọn tên chủ đề để xem phản hồi liên quan.",
@@ -1122,7 +1153,43 @@
       "negative": "Tiêu cực",
       "neutral": "Trung lập"
     },
-    "exportResponses": "Xuất phản hồi XLSX"
+    "exportResponses": "Xuất phản hồi XLSX",
+    "recommendationEvidenceNote": "Gợi ý được chọn theo tên chủ đề và trích dẫn mẫu; hãy xác minh nguyên nhân trước khi áp dụng.",
+    "recommendationsEmpty": "Chưa có đủ phản hồi tiêu cực lặp lại để đưa ra khuyến nghị theo từng vấn đề.",
+    "recommendationAdvice": {
+      "payment": {
+        "short": "Kiểm tra các bước đặt hàng, áp dụng voucher và số tiền cuối cùng; đối chiếu đơn bị lỗi với giao dịch thanh toán.",
+        "long": "Chuẩn hóa cách áp dụng ưu đãi và xử lý thanh toán; theo dõi tỷ lệ thanh toán lỗi, sai lệch hóa đơn và khiếu nại theo kênh."
+      },
+      "technical": {
+        "short": "Thử tái hiện lỗi trên thiết bị và phiên bản ứng dụng được khách dùng; ghi lại thời điểm, thông báo lỗi và cách xử lý tạm thời.",
+        "long": "Theo dõi lỗi theo phiên bản và thiết bị, đặt thời hạn phản hồi sự cố, đồng thời kiểm tra hồi quy trước mỗi lần phát hành."
+      },
+      "wait": {
+        "short": "Đo thời gian chờ theo khung giờ và ca; kiểm tra điểm nghẽn, bố trí người hỗ trợ lúc cao điểm và thông báo thời gian dự kiến cho khách.",
+        "long": "Dự báo nhân sự theo giờ cao điểm; theo dõi thời gian chờ trung vị, nhóm chờ lâu và phản hồi tiêu cực theo ca/chi nhánh."
+      },
+      "staff": {
+        "short": "Quản lý ca rà soát tình huống trong phản hồi, trao đổi trực tiếp với nhân viên liên quan và thống nhất cách xử lý cho lần tiếp theo.",
+        "long": "Chuẩn hóa quy trình giao tiếp và bàn giao; huấn luyện theo tình huống thực tế rồi theo dõi khiếu nại lặp lại theo ca."
+      },
+      "price": {
+        "short": "Đối chiếu giá/chi phí khách thấy với hóa đơn; kiểm tra cách hiển thị phụ phí, điều kiện giảm giá và đổi trả trước khi thanh toán.",
+        "long": "Công khai nhất quán giá, phụ phí và điều kiện ưu đãi/hoàn tiền; theo dõi khiếu nại về giá và giao dịch bỏ dở."
+      },
+      "product": {
+        "short": "Kiểm tra lô hàng/đơn bị phản ánh, ảnh và khâu đóng gói hoặc bảo quản; tạm rà soát các đơn cùng mã sản phẩm.",
+        "long": "Tăng điểm kiểm tra chất lượng ở khâu phát sinh; theo dõi lỗi, đổi trả và phản ánh lặp lại theo mã hàng/lô."
+      },
+      "facility": {
+        "short": "Kiểm tra đúng khu vực và thời điểm khách phản ánh; ghi nhận hạng mục cần sửa, người phụ trách và hạn xử lý.",
+        "long": "Lập lịch bảo trì và kiểm tra vệ sinh định kỳ; theo dõi thời gian khắc phục và lỗi cơ sở vật chất tái diễn."
+      },
+      "other": {
+        "short": "Đọc các phản hồi mẫu, đối chiếu thời điểm, kênh và chi nhánh để xác định tình huống chung; giao người phụ trách kiểm tra.",
+        "long": "Sau khi xác minh nguyên nhân, lập biện pháp có người chịu trách nhiệm và hạn hoàn thành; theo dõi xem cùng vấn đề còn tái diễn không."
+      }
+    }
   },
   "engagement": {
     "tickets": "Xử lý khiếu nại",
