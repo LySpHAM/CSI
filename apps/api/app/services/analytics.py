@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from sqlalchemy import Select, String, case, cast, func, select
@@ -9,7 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import Principal
-from app.models import Answer, Question, Response, Survey, TextAnalysis, Workspace
+from app.models import Answer, Question, Response, Survey, TextAnalysis, Topic, Workspace
 from app.models.enums import ResponseStatus, Sentiment
 from app.schemas.feedback import FeedbackFilter
 from app.services.workspaces import WorkspaceService
@@ -135,6 +136,84 @@ class AnalyticsService:
             {"date": date.isoformat(), "topic_id": str(topic), "count": count}
             for date, topic, count in rows
         ]
+
+    async def topic_quality(self, filters: FeedbackFilter) -> list[dict[str, Any]]:
+        """Metrics theo chủ đề, dùng chung cho dashboard và báo cáo xuất."""
+        analyses = (await self.analysis_scope(filters)).subquery()
+        tagged = select(
+            func.unnest(analyses.c.topic_ids).label("topic_id"),
+            analyses.c.response_id.label("response_id"),
+            analyses.c.sentiment.label("sentiment"),
+            analyses.c.is_urgent.label("is_urgent"),
+        ).subquery()
+        expanded = (
+            select(
+                tagged.c.topic_id,
+                tagged.c.response_id,
+                tagged.c.sentiment,
+                tagged.c.is_urgent,
+                Response.csat.label("csat"),
+                Topic.name.label("topic_name"),
+            )
+            .select_from(tagged)
+            .join(Response, Response.id == tagged.c.response_id)
+            .join(
+                Topic,
+                (Topic.id == tagged.c.topic_id)
+                & (Topic.workspace_id == filters.workspace_id)
+                & Topic.is_active.is_(True),
+            )
+            .subquery()
+        )
+        rows = (
+            await self.db.execute(
+                select(
+                    expanded.c.topic_id,
+                    expanded.c.topic_name,
+                    func.count(func.distinct(expanded.c.response_id)).label("total"),
+                    func.count(func.distinct(expanded.c.response_id))
+                    .filter(expanded.c.sentiment == Sentiment.POSITIVE)
+                    .label("positive"),
+                    func.count(func.distinct(expanded.c.response_id))
+                    .filter(expanded.c.sentiment == Sentiment.NEGATIVE)
+                    .label("negative"),
+                    func.count(func.distinct(expanded.c.response_id))
+                    .filter(expanded.c.is_urgent.is_(True))
+                    .label("urgent"),
+                    func.avg(expanded.c.csat).label("csat"),
+                ).group_by(expanded.c.topic_id, expanded.c.topic_name)
+            )
+        ).all()
+        results = []
+        for row in rows:
+            item = {
+                "topic_id": str(row.topic_id),
+                "topic_name": row.topic_name,
+                "total": row.total,
+                "positive": row.positive,
+                "negative": row.negative,
+                "urgent": row.urgent,
+                "csat": float(row.csat) if row.csat is not None else None,
+                "sample": None,
+            }
+            if row.negative >= 2:
+                sample_query = (await self.analysis_scope(filters)).where(
+                    TextAnalysis.topic_ids.contains([row.topic_id]),
+                    TextAnalysis.sentiment == Sentiment.NEGATIVE,
+                )
+                sample = (
+                    await self.db.execute(
+                        sample_query.with_only_columns(TextAnalysis.text)
+                        .order_by(TextAnalysis.responded_at.desc())
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                if sample:
+                    sample = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[email]", sample)
+                    sample = re.sub(r"(?<!\w)(?:\+?\d[\d .()-]{7,}\d)(?!\w)", "[số điện thoại]", sample)
+                    item["sample"] = sample[:260].strip()
+            results.append(item)
+        return results
 
     async def wordcloud(self, filters: FeedbackFilter) -> list[dict[str, Any]]:
         analyses = (await self.analysis_scope(filters)).subquery()

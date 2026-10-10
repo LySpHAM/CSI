@@ -3,13 +3,12 @@ from __future__ import annotations
 import asyncio
 import io
 import os
-import re
 import uuid
 from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.core.auth import load_principal
 from app.core.config import get_settings
@@ -17,8 +16,8 @@ from app.core.resources import Resources
 from app.core.storage import LocalStorage
 from app.db.tenant import system_session, tenant_session
 from app.domain.tabular import safe_cell
-from app.models import ExportJob, Response, Tenant, TextAnalysis, Topic
-from app.models.enums import ExportKind, JobStatus, Sentiment
+from app.models import ExportJob, Tenant
+from app.models.enums import ExportKind, JobStatus
 from app.schemas.feedback import FeedbackFilter
 from app.services.analytics import AnalyticsService
 from worker.celery_app import celery_app
@@ -26,48 +25,17 @@ from worker.celery_app import celery_app
 
 async def _report_topic_data(service: AnalyticsService, filters: FeedbackFilter) -> dict:
     """Tổng hợp xu hướng, chất lượng theo chủ đề và ví dụ phản hồi tiêu cực."""
-    topic_rows = await service.db.execute(
-        select(Topic.id, Topic.name)
-        .where(Topic.workspace_id == filters.workspace_id, Topic.is_active.is_(True))
-        .order_by(Topic.sort_order, Topic.name)
-    )
-    names = {str(topic_id): name for topic_id, name in topic_rows}
-    analyses = (await service.analysis_scope(filters)).subquery()
-    expanded = (
-        select(
-            func.unnest(analyses.c.topic_ids).label("topic_id"),
-            analyses.c.response_id.label("response_id"),
-            analyses.c.sentiment.label("sentiment"),
-            analyses.c.is_urgent.label("is_urgent"),
-            Response.csat.label("csat"),
-        )
-        .select_from(analyses)
-        .join(Response, Response.id == analyses.c.response_id)
-        .subquery()
-    )
-    metrics = await service.db.execute(
-        select(
-            expanded.c.topic_id,
-            func.count(func.distinct(expanded.c.response_id)).label("total"),
-            func.count(func.distinct(expanded.c.response_id))
-            .filter(expanded.c.sentiment == Sentiment.POSITIVE).label("positive"),
-            func.count(func.distinct(expanded.c.response_id))
-            .filter(expanded.c.sentiment == Sentiment.NEGATIVE).label("negative"),
-            func.count(func.distinct(expanded.c.response_id))
-            .filter(expanded.c.is_urgent.is_(True)).label("urgent"),
-            func.avg(expanded.c.csat).label("csat"),
-        ).group_by(expanded.c.topic_id)
-    )
+    quality = await service.topic_quality(filters)
+    names = {row["topic_id"]: row["topic_name"] for row in quality}
     stats = {
-        str(row.topic_id): {
-            "total": row.total,
-            "positive": row.positive,
-            "negative": row.negative,
-            "urgent": row.urgent,
-            "csat": float(row.csat) if row.csat is not None else None,
+        row["topic_id"]: {
+            "total": row["total"],
+            "positive": row["positive"],
+            "negative": row["negative"],
+            "urgent": row["urgent"],
+            "csat": row["csat"],
         }
-        for row in metrics
-        if str(row.topic_id) in names
+        for row in quality
     }
 
     trend_rows = await service.topics(filters, period="week")
@@ -85,24 +53,7 @@ async def _report_topic_data(service: AnalyticsService, filters: FeedbackFilter)
         key=lambda item: (item[1]["urgent"], item[1]["negative"], item[1]["total"]),
         reverse=True,
     )[:6]
-    examples: dict[str, str] = {}
-    for topic_id, _ in issues:
-        sample_query = (await service.analysis_scope(filters)).where(
-            TextAnalysis.topic_ids.contains([uuid.UUID(topic_id)]),
-            TextAnalysis.sentiment == Sentiment.NEGATIVE,
-        )
-        sample = (
-            await service.db.execute(
-                sample_query.with_only_columns(TextAnalysis.text)
-                .order_by(TextAnalysis.responded_at.desc())
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-        if sample:
-            # Ẩn email/số điện thoại trong trích dẫn trước khi đưa vào tài liệu.
-            sample = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[email]", sample)
-            sample = re.sub(r"(?<!\w)(?:\+?\d[\d .()-]{7,}\d)(?!\w)", "[số điện thoại]", sample)
-            examples[topic_id] = sample[:260].strip()
+    examples = {row["topic_id"]: row["sample"] for row in quality if row["sample"]}
 
     return {
         "names": names,

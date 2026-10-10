@@ -33,6 +33,16 @@ type Overview = {
 };
 type Trend = { date: string; responses: number; csat: number | null };
 type TopicTrend = { date: string; topic_id: string; count: number };
+type TopicQuality = {
+  topic_id: string;
+  topic_name: string;
+  total: number;
+  positive: number;
+  negative: number;
+  urgent: number;
+  csat: number | null;
+  sample: string | null;
+};
 type Word = { word: string; sentiment: string; count: number };
 type Export = {
   id: string;
@@ -79,6 +89,12 @@ export function Dashboard() {
     queryKey: ["topic-trends", filter, period],
     enabled: !!workspace,
     queryFn: () => api<TopicTrend[]>(`/analytics/topics?${filter}&period=${period}`),
+    refetchInterval: 20000,
+  });
+  const topicQuality = useQuery({
+    queryKey: ["topic-quality", filter],
+    enabled: !!workspace,
+    queryFn: () => api<TopicQuality[]>(`/analytics/topic-quality?${filter}`),
     refetchInterval: 20000,
   });
   const catalog = useQuery({
@@ -192,6 +208,11 @@ export function Dashboard() {
   const buckets = [...new Set((topics.data || []).map((row) => row.date))].sort();
   const latest = buckets.at(-1);
   const previous = buckets.at(-2);
+  const qualityRows = [...(topicQuality.data || [])].sort((a, b) => b.total - a.total);
+  const recurringIssues = qualityRows
+    .filter((topic) => topic.negative >= 2)
+    .sort((a, b) => b.urgent - a.urgent || b.negative - a.negative);
+  const negativeTopicTotal = qualityRows.reduce((sum, topic) => sum + topic.negative, 0);
   return (
     <div className="space-y-6">
       <PageHeader
@@ -560,16 +581,27 @@ export function Dashboard() {
               const before =
                 topics.data?.find((r) => r.topic_id === topic.id && r.date === previous)?.count ||
                 0;
+              const delta = before ? Math.round(((current - before) / before) * 100) : null;
+              const trendLabel =
+                before === 0 && current > 0
+                  ? t("trendNew")
+                  : delta === null
+                    ? t("trendNoCompare")
+                    : delta > 0
+                      ? t("trendUp", { change: delta })
+                      : delta < 0
+                        ? t("trendDown", { change: Math.abs(delta) })
+                        : t("trendStable");
               return (
                 <div key={topic.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 bg-background p-4">
                   <span className="size-3 rounded-full" style={{ background: topic.color }} />
                   <Link href={`/responses?topic_id=${topic.id}`} className="underline">
                     {topic.name}
                   </Link>
-                  <span>{current}</span>
-                  {previous && current >= 5 && current > before * 2 && (
-                    <span className="text-urgent-ink">{t("spike")}</span>
-                  )}
+                  <span className="text-sm text-muted-foreground">{t("latestPeriodCount", { count: current })}</span>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${delta !== null && delta > 0 ? "bg-negative-soft text-negative-ink" : delta !== null && delta < 0 ? "bg-positive-soft text-positive-ink" : "bg-muted text-muted-foreground"}`}>
+                    {previous && current >= 5 && current > before * 2 ? t("spike") : trendLabel}
+                  </span>
                   <div className="flex items-end gap-1">
                     {buckets.map((date) => (
                       <span
@@ -593,6 +625,104 @@ export function Dashboard() {
                 </div>
               );
             })}
+          </section>
+          <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
+            <div>
+              <h2 className="text-xl font-semibold">{t("topicQuality")}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{t("topicQualityDescription")}</p>
+            </div>
+            {qualityRows.length ? (
+              <div className="overflow-x-auto rounded-xl border border-border/70">
+                <table className="w-full min-w-[42rem] text-sm">
+                  <thead className="bg-muted/70">
+                    <tr>
+                      <th className="p-3 text-left font-semibold">{t("serviceAspect")}</th>
+                      <th className="p-3 text-right font-semibold">{t("responsesCount")}</th>
+                      <th className="p-3 text-right font-semibold">{t("positivePercent")}</th>
+                      <th className="p-3 text-right font-semibold">{t("negativePercent")}</th>
+                      <th className="p-3 text-right font-semibold">{t("topicCsat")}</th>
+                      <th className="p-3 text-left font-semibold">{t("overallRating")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qualityRows.map((topic) => {
+                      const negativeRate = topic.total ? topic.negative / topic.total : 0;
+                      const positiveRate = topic.total ? topic.positive / topic.total : 0;
+                      const warning = negativeRate >= 0.5 || (topic.csat !== null && topic.csat < 3);
+                      const watch = negativeRate >= 0.3 || (topic.csat !== null && topic.csat < 3.5);
+                      return (
+                        <tr key={topic.topic_id} className="border-t border-border/60 even:bg-muted/20">
+                          <td className="p-3 font-medium">{topic.topic_name}</td>
+                          <td className="p-3 text-right tabular-nums">{topic.total}</td>
+                          <td className="p-3 text-right text-positive-ink tabular-nums">{percent(positiveRate)}</td>
+                          <td className="p-3 text-right text-negative-ink tabular-nums">{percent(negativeRate)}</td>
+                          <td className="p-3 text-right tabular-nums">{topic.csat === null ? "—" : `${topic.csat.toFixed(1)}★`}</td>
+                          <td className={`p-3 ${warning ? "text-negative-ink" : watch ? "text-amber-700" : "text-positive-ink"}`}>
+                            {warning ? t("qualityWarning") : watch ? t("qualityWatch") : t("qualityStable")}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">{t("topicQualityEmpty")}</p>
+            )}
+          </section>
+          <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
+            <div>
+              <h2 className="text-xl font-semibold">{t("recurringIssues")}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{t("recurringIssuesDescription")}</p>
+            </div>
+            {recurringIssues.length ? (
+              <div className="space-y-3">
+                {recurringIssues.slice(0, 6).map((topic) => {
+                  const share = topic.negative / Math.max(1, negativeTopicTotal);
+                  const urgent = topic.urgent > 0;
+                  const high = share >= 0.15;
+                  return (
+                    <article key={topic.topic_id} className="flex flex-wrap items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <h3 className="flex flex-wrap items-center gap-2 font-semibold">
+                          <Link href={`/responses?topic_id=${topic.topic_id}&sentiment=negative`} className="underline">{topic.topic_name}</Link>
+                          <span className="rounded-full bg-negative-soft px-2.5 py-1 text-xs font-medium text-negative-ink">
+                            {t("repeatCount", { count: topic.negative, share: Math.round(share * 100) })}
+                          </span>
+                        </h3>
+                        {topic.sample && <p className="text-sm italic text-muted-foreground">{t("sampleQuote", { quote: topic.sample })}</p>}
+                      </div>
+                      <span className={`shrink-0 text-xs font-bold ${urgent ? "text-negative-ink" : high ? "text-amber-700" : "text-muted-foreground"}`}>
+                        {urgent ? t("priorityUrgent") : high ? t("priorityHigh") : t("priorityWatch")}
+                      </span>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">{t("recurringIssuesEmpty")}</p>
+            )}
+          </section>
+          <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
+            <h2 className="text-xl font-semibold">{t("recommendations")}</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <article className="rounded-xl border border-border/70 bg-background p-4">
+                <h3 className="font-semibold">{t("shortTerm")}</h3>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                  <li>{t("shortTermFocus", { topics: recurringIssues.slice(0, 3).map((item) => item.topic_name).join(", ") || t("noPriorityTopics") })}</li>
+                  <li>{t("shortTermOwner")}</li>
+                  <li>{t("shortTermCompare")}</li>
+                </ul>
+              </article>
+              <article className="rounded-xl border border-border/70 bg-background p-4">
+                <h3 className="font-semibold">{t("longTerm")}</h3>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                  <li>{t("longTermSop")}</li>
+                  <li>{t("longTermMonitor")}</li>
+                  <li>{t("longTermSurvey")}</li>
+                </ul>
+              </article>
+            </div>
           </section>
           <div className="grid gap-4 md:grid-cols-2">
             {["positive", "negative"].map((sentiment) => (

@@ -53,6 +53,11 @@ async def topics(
     return await AnalyticsService(ctx.db, ctx.principal).topics(filters, period)
 
 
+@router.get("/topic-quality")
+async def topic_quality(ctx: Ctx, filters: Filters) -> list[dict[str, Any]]:
+    return await AnalyticsService(ctx.db, ctx.principal).topic_quality(filters)
+
+
 @router.get("/wordcloud")
 async def wordcloud(ctx: Ctx, filters: Filters) -> list[dict[str, Any]]:
     return await AnalyticsService(ctx.db, ctx.principal).wordcloud(filters)
