@@ -1,0 +1,115 @@
+# Nhật ký tiến độ & yêu cầu chức năng (FR)
+
+## Trạng thái giai đoạn
+
+| GĐ    | Nội dung                                                                              | Trạng thái                   |
+| ----- | ------------------------------------------------------------------------------------- | ---------------------------- |
+| 0     | Monorepo, Docker Compose, lint/CI, `.env.example`, design system + layout khung, i18n | ✅ Hoàn thành                |
+| 1     | CSDL, migration, ERD, RLS                                                             | ✅ Hoàn thành                |
+| 2     | Auth, tenant, workspace, thành viên, phân quyền (FR-01→04)                            | Đã triển khai; đang kiểm tra |
+| 3     | Chủ đề theo workspace + bộ mẫu (FR-12→13)                                             | Đã triển khai; đang kiểm tra |
+| 4     | Survey engine P0, link + QR (FR-05→06)                                                | Đã triển khai; đang kiểm tra |
+| 5     | Trang khách, chống spam, voucher (FR-08→11)                                           | Đã triển khai; đang kiểm tra |
+| 6     | NLP pipeline + Celery + dự phòng + evaluate (FR-14→17)                                | Đã triển khai; đang kiểm tra |
+| 7     | Import CSV/Excel (FR-07)                                                              | Đã triển khai; đang kiểm tra |
+| 8     | Danh sách phản hồi, sửa nhãn, chất lượng mô hình (FR-18→20)                           | Đã triển khai; đang kiểm tra |
+| 9     | Dashboard, xu hướng, word cloud, xuất Excel/PDF, SSE (FR-21→24)                       | Đã triển khai; đang kiểm tra |
+| 10–14 | P1 mở rộng & hoàn thiện                                                               | Đã triển khai; đang kiểm tra |
+
+## Giai đoạn 0 — chi tiết
+
+**Tiêu chí hoàn thành:** `docker compose up` chạy; trang mẫu hiển thị đúng; ảnh chụp lưu `docs/screenshots/`.
+
+- [x] Monorepo pnpm + uv workspace; `CLAUDE.md` chứa đặc tả.
+- [x] Docker Compose 8 service (`web`, `api`, `worker`, `beat`, `postgres`, `redis`, `mailpit`, `nginx`), healthcheck + restart policy + graceful shutdown cho từng service.
+- [x] API khung: cấu hình qua env, log JSON, request-id, lỗi chuẩn hóa tiếng Việt, header bảo mật, CORS, health/readiness.
+- [x] Celery: `acks_late`, `reject_on_worker_lost`, prefetch 1, chỉ JSON; hàng đợi `default` và `nlp`; beat heartbeat.
+- [x] Design system: token màu (1 màu chủ đạo + Xanh/Đỏ/Xám/Cam ngữ nghĩa), dark mode, bo góc 12–14px, Be Vietnam Pro tự host.
+- [x] Layout khung: landing (header cố định, hero, tab tính năng, 3 bước, số liệu, FAQ, footer), đăng nhập/đăng ký (UI + validate), khu quản trị (thanh trên, chọn workspace, menu người dùng, "Khảo sát của tôi"), thư viện giao diện (nút, nhãn, KPI, bảng, form, skeleton, rỗng/lỗi), 404, error boundary.
+- [x] i18n `vi` mặc định + `en`, chuyển ngôn ngữ, kiểm tra khớp khóa.
+- [x] Lint/type/test: ruff + mypy strict, ESLint + tsc + Prettier, pytest, Vitest, Playwright (375/768/1280 + axe a11y).
+- [x] CI GitHub Actions: backend, frontend (gồm E2E), audit phụ thuộc, build Docker.
+- [x] Ảnh chụp: `docs/screenshots/{landing,surveys,ui-kit,login}-{375,768,1280}.png`.
+
+**FR hoàn thành ở GĐ 0:** chưa có FR nghiệp vụ (GĐ 0 là nền tảng). Phần nền cho NFR: log JSON + request-id, health-check, header bảo mật/CSP, không lộ stack trace, hàng đợi bền, graceful shutdown, a11y tự động.
+
+## Giai đoạn 1 — chi tiết
+
+**Tiêu chí hoàn thành:** migration chạy sạch; ERD trong `docs/erd.md`.
+
+- [x] 26 bảng (SQLAlchemy 2 typed models), migration `0001` (Alembic async): lên → xuống → lên lại sạch.
+- [x] RLS trên 21 bảng (19 bảng tenant + `tenants` + `users`), vai trò `lys_rls`, ngữ cảnh `app.tenant_id`.
+- [x] Chỉ mục theo đặc tả: `(tenant_id, survey_id, created_at)`, `(tenant_id, sentiment)`, GIN `topic_ids`, trigram không dấu.
+- [x] Repository nền `TenantRepository` (lọc tenant + xóa mềm, ép `tenant_id` khi thêm).
+- [x] `make seed`: 2 doanh nghiệp, 4 workspace, 4 khảo sát, 1.660 phản hồi, 1.363 nhận xét có teencode/emoji/ca khẩn cấp.
+- [x] Service `migrate` trong Compose; CI có PostgreSQL thật; test dùng testcontainers khi chạy cục bộ.
+- [x] Test: 16 test CSDL (RLS: đọc/ghi/sửa/xóa chéo tenant, đoán ID, thiếu ngữ cảnh, rò ngữ cảnh qua pool, quyền bảng auth, độ phủ RLS; migration; khớp model; seed; repository) + test ERD.
+
+**FR:** nền tảng cho FR-04 (lớp RLS) — hoàn thiện kiểm thử qua mọi endpoint ở GĐ 2.
+
+## Giai đoạn 2 — chi tiết
+
+**Tiêu chí hoàn thành:** test cô lập tenant xanh; đăng ký/đăng nhập/mời hoạt động.
+
+| FR    | Nội dung                                                                                                             | Trạng thái |
+| ----- | -------------------------------------------------------------------------------------------------------------------- | ---------- |
+| FR-01 | Đăng ký doanh nghiệp + admin, đăng nhập/đăng xuất, refresh xoay vòng, quên/đặt lại mật khẩu, điều hướng theo vai trò | ✅         |
+| FR-02 | CRUD workspace, bộ chủ đề mẫu theo ngành khi tạo, xóa mềm có xác nhận tên                                            | ✅         |
+| FR-03 | Mời qua email (link 7 ngày), vai trò + phạm vi workspace, ma trận quyền, đổi vai trò/xóa thành viên                  | ✅         |
+| FR-04 | Cô lập tenant 4 lớp + bộ test tự kiểm tra mọi endpoint có ID                                                         | ✅         |
+
+- Bảo mật: cookie httpOnly/SameSite, CSRF, rate limit, khóa tạm, audit log, chống dò tài khoản.
+- Giao diện: đăng nhập/đăng ký/quên/đặt lại mật khẩu/nhận lời mời, header theo quyền, chọn
+  workspace & doanh nghiệp, trang **Quản lý** (thành viên, lời mời, không gian, doanh nghiệp),
+  **Trang cá nhân** (hồ sơ, ngôn ngữ, đổi mật khẩu).
+- Test: backend 81 (gồm 2 test ghi đồng thời), Vitest 23, Playwright 30 (375/768/1280 + axe) +
+  15 ảnh chụp.
+
+## Giai đoạn 3 — chi tiết
+
+**Tiêu chí hoàn thành:** CRUD chủ đề, bộ mẫu theo ngành.
+
+| FR               | Nội dung                                                                                                                                                                   | Trạng thái |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| FR-12            | Thêm/sửa/xóa/gộp/bật-tắt/sắp xếp (kéo thả) chủ đề, màu, từ khóa, mô tả; 6 bộ mẫu ngành (nhà hàng, IT, khách sạn, bán lẻ, giáo dục, y tế); áp dụng mẫu (thêm hoặc thay thế) | ✅         |
+| FR-13 (cấu hình) | `load_topic_catalog` chỉ nạp chủ đề đang bật của đúng workspace + tenant; có test chứng minh không lẫn ngành/tenant                                                        | ✅         |
+
+- Xóa/gộp chủ đề cập nhật luôn nhãn trên phản hồi đã phân tích (không để ID mồ côi, không trùng).
+- Mỗi thay đổi tăng `topic_sets.version`; nút "Phân tích lại" đánh dấu `pending` và xếp job
+  `worker.tasks.nlp.reanalyze_workspace` (worker hiện thực ở GĐ 6).
+- Test: backend 88 (gồm 7 test chủ đề + 9 endpoint mới trong bộ cô lập tenant), Playwright 33 + 15 ảnh chụp.
+
+## Phiên tiếp tục 02/10/2026
+
+GĐ4: đã triển khai API CRUD, lưu nháp, nhân bản, xuất bản snapshot, đóng/xóa mềm, chia sẻ link/QR PNG/SVG theo nguồn; giao diện danh sách API thật và builder kéo thả/bàn phím, xem trước, màu/cỡ chữ. **Chưa kiểm thử** theo yêu cầu; các tiêu chí nghiệm thu được xác minh ở GĐ14.
+
+GĐ5: trang khách SSR tại /s/{slug}, validator registry, tiến độ sessionStorage, token ký có hạn/buộc IP và phiên bản, honeypot, thời gian tối thiểu, rate limit, gửi lặp idempotent, voucher, lưu thô + pending trước dispatch NLP. **Chưa kiểm thử**. Push hiện bị chặn bởi Git chưa đăng nhập và connector GitHub thiếu quyền Git Trees (403); tiếp tục commit cục bộ.
+
+GĐ6: tiền xử lý Unicode/teencode/emoji, phân tích theo câu, PhoBERT artifact + calibration, topic embedding tùy chọn + baseline từ khóa, luật khẩn cấp, worker batch/skip-locked/RLS/retry/quét bù; train/evaluate/retrain và CSV demo có cảnh báo. **Chưa kiểm thử; chưa có artifact fine-tune/tập đánh giá production; không tuyên bố đạt 80%.** Email khẩn cấp gắn luồng ticket/outbox ở GĐ12.
+
+GĐ7: upload CSV/XLSX giới hạn dung lượng/archive/cột/dòng; preview 20 dòng + mapping theo mã câu hỏi, nền 200 dòng/transaction, tiến độ bền qua retry, báo cáo lỗi tải được và pending NLP. StorageBackend local có chống traversal, ghi nguyên tử. **Chưa kiểm thử hoặc đo 10.000 dòng**. Beat nhận job trong tối đa 30 giây, tránh dispatch trước commit.
+
+GĐ8: API bảng nhận xét có lọc/tìm không dấu/sort/phân trang, sửa/verify nhãn nguyên tử + kiểm tra topic workspace, batch <=100, lịch sử, undo mới nhất, duyệt admin, dataset CSV/JSONL chỉ nhãn được duyệt, trang chất lượng không giả accuracy; bảng UI và ngăn chi tiết + phím n/p. **Chưa kiểm thử**. Bảng nhận xét hiện hiển thị mỗi text analysis; phản hồi không văn bản được tính ở dashboard GĐ9.
+
+GĐ9: tổng hợp SQL overview/trends/topic/wordcloud, dashboard có filter survey/thời gian, biểu đồ/cảnh báo spike, click từ mở danh sách; SSE + polling dự phòng; export nền XLSX 3 sheet/PDF biểu đồ/font Unicode, ẩn định danh, kiểm quyền lúc chạy/lúc tải, hạn 7 ngày. **Chưa kiểm thử, chưa đo <2s/100k.** Git đã đăng nhập, GĐ4–8 được push sau khi người dùng hoàn tất GitHub CLI.
+
+GĐ10: registry câu hỏi NPS/picture/slider/ranking/contact/upload/matrix/datetime; server và client tính đường đi, AND/OR/display/jump/carry, validator chặn tham chiếu tiến và jump ngược; lịch/quota tổng/quota điều kiện bằng/IP/browser; vi/en và điều hướng một câu/trang; upload khách 5MB có ClamAV + proof buộc lượt trả lời; logo/nền tái mã hóa an toàn. **Chưa kiểm thử**. Dịch vụ ClamAV phải được cấu hình để bật upload; quota điều kiện hiện hỗ trợ bằng một giá trị.
+
+GĐ11: quiz chấm server từ snapshot, không gửi đáp án trước khi nộp, rút ngân hàng/xáo theo nonce và giữ attempt khi tải lại, đồng hồ tự nộp + giới hạn server, điểm/xếp loại; 8 template tiếng Việt có tạo survey thật; mẫu Excel + import câu hỏi có validate toàn bộ và chống ghi đè bản nháp đồng thời. **Chưa kiểm thử**. Ngân hàng hiện là danh sách câu hỏi của khảo sát, chưa có kho ngân hàng xuyên khảo sát.
+
+GĐ12: ticket tự động từ NLP/hiệu chỉnh (khẩn/tiêu cực/sao thấp có nhận xét), trạng thái/người xử lý/hạn/ghi chú/metrics; email outbox bền + retry, mời hàng loạt/open-click/link định danh; Kiosk reset sau 8s, iframe cấu hình allowlist; Zalo interface+mock; analytics từng câu/NPS/Pivot; lịch PDF qua email + link đọc có hạn; migration 0002 có RLS. **Chưa kiểm thử**. SMTP có semantics at-least-once: crash sau gửi trước commit có thể gửi trùng; chưa có payment/Zalo thật.
+
+GĐ13: hạn mức workspace/member+invitation/survey/NLP tháng với khóa tenant chống vượt đồng thời; phản hồi thô vẫn lưu, NLP hết hạn ghi skipped/PLAN_LIMIT; billing usage + mô phỏng đổi gói dev (production từ chối); audit phân trang, Prometheus latency/request-counter và trạng thái NLP theo tenant, giao diện billing/audit/metrics. **Chưa kiểm thử**. Hạn mức đặt tại service giữ invariant thay vì middleware dò URL.
+
+GĐ14: đã thêm service backup/retention/checksum, restore nguyên tử có xác nhận database, endpoint admin xóa phản hồi và thu hồi job nguồn/derived, tài liệu vận hành và CI cho nhánh hiện tại. Bắt đầu kiểm tra tổng hợp sau khi triển khai đủ GĐ4–14; chưa xác nhận benchmark/model production.
+
+## Kiểm tra tổng hợp hiện tại
+
+Đã chạy: Ruff, Mypy strict, TypeScript trực tiếp (`tsc --noEmit`), 96 test Python không cần
+PostgreSQL, 26 test Vitest, kiểm tra vi/en và gate liệt kê mọi route có ID. Các số test trước
+đây ở GĐ0–3 là nhật ký cũ, không thay cho việc chạy lại integration sau GĐ14.
+
+Chưa chạy thành công: PostgreSQL integration, restore backup, Docker build, Playwright thật.
+Local Next build/typegen bị chặn bởi cache native SWC trên Windows; workflow CI đã chuẩn bị
+PostgreSQL/Redis và API thật cho E2E, đang cần quyền `workflow` của GitHub CLI để push.
+Chưa có corpus/artifact production hoặc benchmark 100k để xác nhận accuracy/latency/SLA.
