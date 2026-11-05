@@ -42,6 +42,7 @@ export type Theme = {
 export type Survey = {
   id: string;
   workspace_id: string;
+  created_at: string;
   title: string;
   description: string | null;
   slug: string;

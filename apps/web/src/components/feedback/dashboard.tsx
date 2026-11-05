@@ -21,6 +21,7 @@ import type { Page, Survey } from "@/lib/api/surveys";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { ReportTools } from "./report-tools";
+import { ReportExportDialog } from "./report-export-dialog";
 import { Input } from "@/components/ui/input";
 
 type Overview = {
@@ -45,14 +46,6 @@ type TopicQuality = {
   recommendation_key: "payment" | "technical" | "wait" | "staff" | "price" | "product" | "facility" | "other";
 };
 type Word = { word: string; sentiment: string; count: number };
-type Export = {
-  id: string;
-  status: string;
-  ready: boolean;
-  error_message: string | null;
-  filename?: string | null;
-};
-
 export function Dashboard() {
   const t = useTranslations("dashboard");
   const tn = useTranslations("notifications");
@@ -65,8 +58,8 @@ export function Dashboard() {
   const [surveyId, setSurveyId] = useState("");
   const [channel, setChannel] = useState("");
   const [period, setPeriod] = useState("week");
-  const [job, setJob] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const hasDashboardFilters = Boolean(start || end || surveyId || channel || period !== "week");
   const params = new URLSearchParams({ workspace_id: workspace?.id || "" });
   if (start) params.set("start", new Date(`${start}T00:00:00`).toISOString());
@@ -117,16 +110,6 @@ export function Dashboard() {
     enabled: !!workspace,
     queryFn: () => api<Page<Survey>>(`/surveys?workspace_id=${workspace!.id}&page_size=100`),
   });
-  const report = useQuery({
-    queryKey: ["export", job],
-    enabled: !!job,
-    queryFn: () => api<Export>(`/exports/${job}`),
-    refetchInterval: (q) =>
-      ["done", "failed"].includes(q.state.data?.status || "") ? false : 2000,
-  });
-  useEffect(() => {
-    if (report.data?.ready) toast.success(tn("exportReady"));
-  }, [job, report.data?.ready, tn]);
   useEffect(() => {
     if (!workspace) return;
     const stream = new EventSource(apiUrl(`/analytics/events?${filter}`), {
@@ -141,19 +124,6 @@ export function Dashboard() {
     stream.onerror = () => stream.close();
     return () => stream.close();
   }, [filter, workspace, client]);
-  async function exportReport(kind: string) {
-    setError("");
-    try {
-      const result = await api<Export>("/exports", {
-        method: "POST",
-        body: { kind, filters: Object.fromEntries(params) },
-      });
-      setJob(result.id);
-      toast.info(t("exportPending"));
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
   async function downloadFile(path: string, filename: string) {
     setError("");
     try {
@@ -231,18 +201,9 @@ export function Dashboard() {
                 <Download className="size-4" aria-hidden />
                 {t("exportResponses")}
               </Button>
-              {["xlsx", "pdf"].map((kind) => (
-                <Button
-                  key={kind}
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => {
-                    void exportReport(kind);
-                  }}
-                >
-                  {t("export", { kind: kind.toUpperCase() })}
-                </Button>
-              ))}
+              <Button className="rounded-xl" onClick={() => setExportDialogOpen(true)}>
+                <Download className="size-4" aria-hidden />Xuất báo cáo
+              </Button>
               <Button
                 className="gap-2 rounded-xl"
                 onClick={() => document.getElementById("report-schedule")?.scrollIntoView({ behavior: "smooth" })}
@@ -253,6 +214,17 @@ export function Dashboard() {
             </div>
           )
         }
+      />
+      <ReportExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        filters={Object.fromEntries(params)}
+        surveyName={surveys.data?.items.find((survey) => survey.id === surveyId)?.title || t("allSurveys")}
+        dateRange={start || end ? `${start || "..."} – ${end || "..."}` : "Toàn bộ thời gian"}
+        scope={[
+          channel ? t(`channels.${channel}` as Parameters<typeof t>[0]) : t("allChannels"),
+          surveyId ? "1 khảo sát" : t("allSurveys"),
+        ].join(" · ")}
       />
       <section aria-label={t("filters")} className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm sm:p-5">
         <div className="mb-4 flex items-center gap-3">
@@ -299,33 +271,8 @@ export function Dashboard() {
         </div>
       </section>
       <div className="min-w-0 space-y-6">
-          {(error || overview.error || report.error) && (
-            <p role="alert">{error || overview.error?.message || report.error?.message}</p>
-          )}
+          {(error || overview.error) && <p role="alert">{error || overview.error?.message}</p>}
           {overview.isLoading && <p role="status">{t("loading")}</p>}
-          {report.data && (
-            <div role="status" className="rounded-xl border p-4">
-              {report.data.ready ? (
-                <button
-                  type="button"
-                  className="underline"
-                  onClick={() =>
-                    void downloadFile(
-                      `/exports/${job}/download`,
-                      report.data.filename || `report-${job}.xlsx`,
-                    )
-                  }
-                >
-                  {t("download")}
-                </button>
-              ) : report.data.status === "failed" ? (
-                t("exportFailed")
-              ) : (
-                t("exportPending")
-              )}
-              {report.data.error_message && <p>{report.data.error_message}</p>}
-            </div>
-          )}
           <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
             {[
               { label: "total", value: data?.total_responses ?? "—", Icon: MessageSquare, tone: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300" },

@@ -34,6 +34,24 @@ const questionTypes = [
   ["ranking", ArrowDown], ["contact", ContactRound], ["upload", Upload], ["matrix", Grid2X2], ["datetime", Circle],
 ] as const;
 
+function formatSurveyPeriod(
+  opensAt: string | null,
+  closesAt: string | null,
+  fallback: string,
+  fromLabel: (date: string) => string,
+  untilLabel: (date: string) => string,
+) {
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+  if (!opensAt && !closesAt) return fallback;
+  if (opensAt && closesAt) return `${formatter.format(new Date(opensAt))} – ${formatter.format(new Date(closesAt))}`;
+  return opensAt
+    ? fromLabel(formatter.format(new Date(opensAt)))
+    : untilLabel(formatter.format(new Date(closesAt!)));
+}
+
 function QuestionEditor({
   question: q,
   questions,
@@ -220,7 +238,7 @@ export function SurveyBuilder({ id }: { id?: string }) {
         body: { workspace_id: workspace.id, title: t("untitled") },
       });
       toast.success(tn("surveyCreated"));
-      router.replace(`/surveys/${s.id}`);
+      router.replace(`/surveys/${s.id}/edit`);
     } catch (e) {
       setError((e as Error).message);
       setCreating(false);
@@ -446,6 +464,10 @@ function Editor({ initial }: { initial: Survey }) {
       <p role="status">
         {t(`statuses.${draft.status}`)} · {t("autosave")}
       </p>
+      <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:grid-cols-2">
+        <p><span className="font-semibold">{t("createdAt")}:</span> {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(initial.created_at))}</p>
+        <p><span className="font-semibold">{t("surveyPeriod")}:</span> {formatSurveyPeriod(initial.opens_at, initial.closes_at, t("noSchedule"), (date) => t("fromDate", { date }), (date) => t("untilDate", { date }))}</p>
+      </section>
       <fieldset disabled={!canEdit} className="grid min-w-0 gap-5 border-0 p-0 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="min-w-0 space-y-5">
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

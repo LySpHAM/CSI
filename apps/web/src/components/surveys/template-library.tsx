@@ -109,7 +109,7 @@ export function TemplateLibrary({
         body: { workspace_id: workspaceId },
       });
       toast.success(tn("templateCreated"));
-      router.push(`/surveys/${survey.id}`);
+      router.push(`/surveys/${survey.id}/edit`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

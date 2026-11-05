@@ -203,6 +203,7 @@ class SurveyCreate(SurveyInput):
 class SurveyOut(ApiModel):
     id: uuid.UUID
     workspace_id: uuid.UUID
+    created_at: datetime
     title: str
     description: str | None
     status: str

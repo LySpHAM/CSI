@@ -5,13 +5,22 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Pencil, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Eye, Pencil, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { ApiError, api } from "@/lib/api/client";
 import { useCan, useCurrentWorkspace } from "@/lib/api/hooks";
 import type { Page, Survey } from "@/lib/api/surveys";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function SurveysList() {
   const t = useTranslations("engine");
@@ -23,6 +32,8 @@ export function SurveysList() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [actionError, setActionError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Survey | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const query = useQuery({
     queryKey: ["surveys", workspace?.id, search, status, page],
     enabled: !!workspace,
@@ -37,16 +48,19 @@ export function SurveysList() {
         ),
   });
   async function removeSurvey(survey: Survey) {
-    if (!window.confirm(t("deleteConfirm", { title: survey.title }))) return;
     setActionError("");
+    setDeleting(true);
     try {
       await api(`/surveys/${survey.id}?confirm_title=${encodeURIComponent(survey.title)}`, {
         method: "DELETE",
       });
       await client.invalidateQueries({ queryKey: ["surveys"] });
       toast.success(tn("deleted"));
+      setDeleteTarget(null);
     } catch (error) {
       setActionError(error instanceof ApiError ? error.message : String(error));
+    } finally {
+      setDeleting(false);
     }
   }
   return (
@@ -161,26 +175,25 @@ export function SurveysList() {
                 </div>
                 <p className="text-sm text-muted-foreground">{t("responseCount", { count: s.response_count })}</p>
                 <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">{s.description}</p>
-                <div className="mt-auto flex items-center justify-between pt-1">
-                  {canEdit ? (
-                    <Button variant="outline" size="icon-sm" asChild aria-label={t("edit")} title={t("edit")}>
-                      <Link href={`/surveys/${s.id}`}>
-                        <Pencil aria-hidden />
-                      </Link>
+                <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/surveys/${s.id}`}><Eye aria-hidden />{t("viewDetails")}</Link>
                     </Button>
-                  ) : <span />}
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      aria-label={t("deleteSurvey")}
-                      title={t("deleteSurvey")}
-                      onClick={() => void removeSurvey(s)}
-                    >
-                      <Trash2 aria-hidden />
-                    </Button>
-                  )}
+                    {canEdit && (
+                      <>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/surveys/${s.id}/edit`}><Pencil aria-hidden />{t("edit")}</Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDeleteTarget(s)}
+                        >
+                          <Trash2 aria-hidden />{t("deleteSurvey")}
+                        </Button>
+                      </>
+                    )}
                 </div>
               </article>
             ))}
@@ -204,6 +217,26 @@ export function SurveysList() {
           )}
         </div>
       </div>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirmDeleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && t("deleteConfirm", { title: deleteTarget.title })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("cancelAction")}</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => deleteTarget && void removeSurvey(deleteTarget)}
+            >
+              {deleting ? t("deleting") : t("deleteSurvey")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
